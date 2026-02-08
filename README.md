@@ -1,73 +1,310 @@
 # MCP Reddit Server
-[![smithery badge](https://smithery.ai/badge/@adhikasp/mcp-reddit)](https://smithery.ai/server/@adhikasp/mcp-reddit)
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server that provides tools for fetching and analyzing Reddit content.
-
-<a href="https://glama.ai/mcp/servers/3cg9gdyors"><img width="380" height="200" src="https://glama.ai/mcp/servers/3cg9gdyors/badge" alt="mcp-reddit MCP server" /></a>
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server that provides tools for fetching Reddit content. Works with Claude Desktop, Microsoft Copilot Studio, Power Automate, and any MCP-compatible client.
 
 ## Features
 
-- Fetch hot threads from any subreddit
-- Get detailed post content including comments
-- Support for different post types (text, link, gallery)
+- **8 Reddit Tools**: Fetch hot, new, rising, and top posts from any subreddit
+- **Multiple Connection Methods**:
+  - MCP Streamable HTTP (for Copilot Studio, Claude Desktop)
+  - REST API with OpenAPI spec (for Power Automate, direct HTTP)
+- **Topic Aggregation**: Fetch posts from multiple related subreddits by topic
+- **Comment Trees**: Get post content with threaded comments
+- **Subreddit Info**: Get subscriber counts and descriptions
 
-## Installation
+## Available Tools
 
-### Installing via Smithery
+| Tool | Description |
+|------|-------------|
+| `reddit_hot` | Get hot posts from a subreddit |
+| `reddit_new` | Get newest posts from a subreddit |
+| `reddit_rising` | Get rising/trending posts |
+| `reddit_top` | Get top posts by time period |
+| `reddit_front` | Get Reddit front page posts |
+| `reddit_post` | Get post content with comments |
+| `reddit_topic` | Get posts from topic-related subreddits |
+| `reddit_info` | Get subreddit info (subscribers, description) |
 
-To install Reddit Content for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@adhikasp/mcp-reddit):
+---
+
+## Quick Start
+
+### Prerequisites
+
+1. **Reddit API Credentials**: Create an app at https://www.reddit.com/prefs/apps
+   - Choose "script" type
+   - Set redirect URI to `http://localhost:8080`
+   - Note your Client ID and Client Secret
+
+2. **Generate Refresh Token**:
+   ```bash
+   pip install praw
+   python get_refresh_token.py
+   ```
+
+3. **Create `.env` file**:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your credentials
+   ```
+
+---
+
+## Local Development
+
+### Running Locally
 
 ```bash
-npx -y @smithery/cli install @adhikasp/mcp-reddit --client claude
+# Install dependencies
+pip install uv
+uv sync
+
+# Run the server
+uv run uvicorn mcp_reddit.web_server:app --host 0.0.0.0 --port 8000
 ```
 
-### Manual Installation
+The server will be available at:
+- REST API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+- MCP Endpoint: http://localhost:8000/mcp/ (requires MCP_API_KEY)
+
+### Using with Claude Desktop (Local)
+
+Add to your `claude_desktop_config.json`:
+
 ```json
 {
-  "reddit": {
-    "command": "uvx",
-    "args": ["--from", "git+https://github.com/adhikasp/mcp-reddit.git", "mcp-reddit"],
-    "env": {}
+  "mcpServers": {
+    "reddit": {
+      "command": "uv",
+      "args": ["run", "uvicorn", "mcp_reddit.web_server:app", "--port", "8000"],
+      "cwd": "/path/to/mcp-reddit",
+      "env": {
+        "REDDIT_CLIENT_ID": "your_client_id",
+        "REDDIT_CLIENT_SECRET": "your_client_secret",
+        "REDDIT_REFRESH_TOKEN": "your_refresh_token",
+        "MCP_API_KEY": "your_api_key"
+      }
+    }
   }
 }
 ```
 
-## Usage
+Or use `mcp-remote` to connect to a running server:
 
-Using [mcp-client-cli](https://github.com/adhikasp/mcp-client-cli):
-
+```json
+{
+  "mcpServers": {
+    "reddit": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:8000/mcp/",
+        "--header",
+        "X-API-Key: your_api_key"
+      ]
+    }
+  }
+}
 ```
-$ llm what are latest hot thread in r/victoria3
 
-I'll fetch the latest hot threads from the Victoria 3 subreddit for you.
+---
 
-Tool Calls:
-  fetch_hot_threads
-  Args:
-    subreddit: victoria3
+## Azure Deployment
 
+### Option 1: Automated Deployment Script
 
-Based on the hot threads, here are the key highlights from the Victoria 3 subreddit:
+```bash
+chmod +x deploy-to-azure.sh
+./deploy-to-azure.sh
+```
 
-1. Dev Diary #126 - Update 1.8 Overview
-   - Major updates planned for the game, including:
-     - Political Movement Rework (Ideological Forces)
-     - Discrimination Rework
-     - Food Availability, Famines, and Harvest Incidents
-     - Additional features like Companies owning buildings and Bulk Nationalization
+The script will:
+1. Create a resource group
+2. Create Azure Container Registry
+3. Build and push the Docker image
+4. Create Container Apps environment
+5. Deploy the container with your Reddit credentials
 
-2. Dev Diary #138 - Pivot of Empire Update
-   - Update 1.8 "Masala Chai" has been released
-   - Focuses on India with new Journal Entries, Events, and Immersion Pack
-   - 10 new achievements added
-   - Save games from 1.7.7 are not compatible with 1.8
+### Option 2: Manual Deployment
 
-3. Interesting Community Discussions:
-   - A player shared a detailed experience of retaking Constantinople as Greece, highlighting the complex population dynamics
-   - Humorous posts about game mechanics, such as investment rights and political movements
-   - Various memes and gameplay screenshots showcasing unique game situations
+#### 1. Create Azure Resources
 
-The most upvoted thread is the Dev Diary #126, which provides an in-depth look at the upcoming game mechanics improvements, particularly the reworks to political movements and discrimination systems.
+```bash
+# Set variables
+RESOURCE_GROUP="mcp-reddit-rg"
+LOCATION="westeurope"  # or your preferred region
+ACR_NAME="yourregistryname"
 
-Would you like me to elaborate on any of these points or provide more details about the Victoria 3 update?
-``` 
+# Create resource group
+az group create --name $RESOURCE_GROUP --location $LOCATION
+
+# Create container registry
+az acr create --name $ACR_NAME --resource-group $RESOURCE_GROUP --sku Basic --admin-enabled true
+
+# Create container apps environment
+az containerapp env create --name mcp-reddit-env --resource-group $RESOURCE_GROUP --location $LOCATION
+```
+
+#### 2. Build and Push Image
+
+```bash
+az acr build --registry $ACR_NAME --image mcp-reddit:latest --file Dockerfile.azure .
+```
+
+#### 3. Deploy Container App
+
+```bash
+# Get ACR password
+ACR_PASSWORD=$(az acr credential show --name $ACR_NAME --query "passwords[0].value" -o tsv)
+
+# Generate MCP API key
+MCP_API_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+
+# Create container app
+az containerapp create \
+  --name mcp-reddit-server \
+  --resource-group $RESOURCE_GROUP \
+  --environment mcp-reddit-env \
+  --image $ACR_NAME.azurecr.io/mcp-reddit:latest \
+  --registry-server $ACR_NAME.azurecr.io \
+  --registry-username $ACR_NAME \
+  --registry-password "$ACR_PASSWORD" \
+  --target-port 8000 \
+  --ingress external \
+  --min-replicas 1 \
+  --max-replicas 5 \
+  --cpu 0.5 \
+  --memory 1Gi \
+  --secrets \
+    reddit-client-id="YOUR_CLIENT_ID" \
+    reddit-client-secret="YOUR_CLIENT_SECRET" \
+    reddit-refresh-token="YOUR_REFRESH_TOKEN" \
+    mcp-api-key="$MCP_API_KEY" \
+  --env-vars \
+    REDDIT_CLIENT_ID=secretref:reddit-client-id \
+    REDDIT_CLIENT_SECRET=secretref:reddit-client-secret \
+    REDDIT_REFRESH_TOKEN=secretref:reddit-refresh-token \
+    MCP_API_KEY=secretref:mcp-api-key
+```
+
+#### 4. Get Your Server URL
+
+```bash
+az containerapp show --name mcp-reddit-server --resource-group $RESOURCE_GROUP --query "properties.configuration.ingress.fqdn" -o tsv
+```
+
+#### 5. (Optional) Add Custom Domain
+
+```bash
+# Add custom domain
+az containerapp hostname add \
+  --name mcp-reddit-server \
+  --resource-group $RESOURCE_GROUP \
+  --hostname your-domain.com
+
+# Bind SSL certificate
+az containerapp hostname bind \
+  --name mcp-reddit-server \
+  --resource-group $RESOURCE_GROUP \
+  --hostname your-domain.com \
+  --environment mcp-reddit-env \
+  --validation-method CNAME
+```
+
+---
+
+## Connection Methods
+
+### 1. MCP Streamable HTTP (Authenticated)
+
+For **Microsoft Copilot Studio** and **Claude Desktop**:
+
+| Setting | Value |
+|---------|-------|
+| URL | `https://your-server.com/mcp/` |
+| Auth | API Key |
+| Header | `X-API-Key` |
+
+**Important**: The URL must have a trailing slash (`/mcp/`)
+
+### 2. REST API / OpenAPI (No Auth Required)
+
+For **Power Automate** and **direct HTTP calls**:
+
+| Setting | Value |
+|---------|-------|
+| Base URL | `https://your-server.com` |
+| OpenAPI Spec | `https://your-server.com/openapi-3.0.json` |
+| Docs | `https://your-server.com/docs` |
+
+**REST Endpoints**:
+- `POST /api/hot-threads` - Get hot posts
+- `POST /api/post-content` - Get post with comments
+- `POST /api/topic-latest` - Get posts by topic
+- `POST /api/front-page` - Get front page posts
+- `POST /api/subreddit-posts-by-time` - Get top posts by time
+- `POST /api/subreddit-new-posts` - Get new posts
+- `POST /api/subreddit-rising-posts` - Get rising posts
+- `POST /api/subreddit-info` - Get subreddit info
+- `GET /api/topics` - List available topics
+
+---
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `REDDIT_CLIENT_ID` | Yes | Reddit app client ID |
+| `REDDIT_CLIENT_SECRET` | Yes | Reddit app client secret |
+| `REDDIT_REFRESH_TOKEN` | Yes | Reddit OAuth refresh token |
+| `MCP_API_KEY` | No | API key for MCP endpoint authentication |
+
+### Topic Categories
+
+The server includes predefined topic categories in `list.txt`:
+- Programming
+- Tech News
+- AI/ML
+- Gaming
+- Science
+- And more...
+
+Edit `list.txt` to customize topic-to-subreddit mappings.
+
+---
+
+## Updating Deployment
+
+```bash
+# Rebuild image
+az acr build --registry $ACR_NAME --image mcp-reddit:latest --file Dockerfile.azure .
+
+# Force new revision
+az containerapp update \
+  --name mcp-reddit-server \
+  --resource-group $RESOURCE_GROUP \
+  --image $ACR_NAME.azurecr.io/mcp-reddit:latest \
+  --set-env-vars FORCE_UPDATE="$(date +%s)"
+```
+
+---
+
+## Cleanup
+
+```bash
+# Delete all Azure resources
+az group delete --name mcp-reddit-rg --yes --no-wait
+```
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Credits
+
+Based on [mcp-reddit](https://github.com/adhikasp/mcp-reddit) by adhikasp.

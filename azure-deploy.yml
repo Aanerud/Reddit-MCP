@@ -1,0 +1,37 @@
+# Azure Container Apps deployment configuration
+apiVersion: 2023-05-02-preview
+name: mcp-reddit-server
+location: eastus
+properties:
+  environmentId: /subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP/providers/Microsoft.App/managedEnvironments/YOUR_ENVIRONMENT
+  configuration:
+    ingress:
+      external: true
+      targetPort: 8000
+      traffic:
+        - weight: 100
+          latestRevision: true
+    secrets:
+      - name: reddit-client-id
+        value: YOUR_REDDIT_CLIENT_ID
+      - name: reddit-client-secret
+        value: YOUR_REDDIT_CLIENT_SECRET
+      - name: reddit-refresh-token
+        value: YOUR_REDDIT_REFRESH_TOKEN
+  template:
+    containers:
+      - name: mcp-reddit
+        image: YOUR_REGISTRY.azurecr.io/mcp-reddit:latest
+        env:
+          - name: REDDIT_CLIENT_ID
+            secretRef: reddit-client-id
+          - name: REDDIT_CLIENT_SECRET
+            secretRef: reddit-client-secret
+          - name: REDDIT_REFRESH_TOKEN
+            secretRef: reddit-refresh-token
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+    scale:
+      minReplicas: 1
+      maxReplicas: 10
