@@ -1,8 +1,12 @@
 [project]
 name = "mcp-reddit-server"
-version = "0.1.0"
-description = "Add your description here"
-# readme = "README.md"
+version = "1.0.0"
+description = "A comprehensive Reddit MCP server with REST API, topic aggregation, and Azure deployment"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+authors = [
+    { name = "Aanerud" },
+]
 requires-python = ">=3.11"
 dependencies = [
     "dnspython>=2.7.0",

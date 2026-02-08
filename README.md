@@ -1,16 +1,17 @@
 # MCP Reddit Server
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server that provides tools for fetching Reddit content. Works with Claude Desktop, Microsoft Copilot Studio, Power Automate, and any MCP-compatible client.
+A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server for Reddit. Provides 8 tools for fetching Reddit content, a full REST API, and Azure deployment support. Works with Claude Desktop, Microsoft Copilot Studio, Power Automate, and any MCP-compatible client.
 
 ## Features
 
 - **8 Reddit Tools**: Fetch hot, new, rising, and top posts from any subreddit
-- **Multiple Connection Methods**:
-  - MCP Streamable HTTP (for Copilot Studio, Claude Desktop)
-  - REST API with OpenAPI spec (for Power Automate, direct HTTP)
 - **Topic Aggregation**: Fetch posts from multiple related subreddits by topic
 - **Comment Trees**: Get post content with threaded comments
 - **Subreddit Info**: Get subscriber counts and descriptions
+- **Multiple Connection Methods**:
+  - MCP Streamable HTTP (for Copilot Studio, Claude Desktop)
+  - REST API with OpenAPI spec (for Power Automate, direct HTTP)
+- **Azure Deployment**: Docker + Container Apps deployment out of the box
 
 ## Available Tools
 
@@ -301,10 +302,10 @@ az group delete --name mcp-reddit-rg --yes --no-wait
 
 ---
 
+## Acknowledgments
+
+This project was originally inspired by [mcp-reddit](https://github.com/adhikasp/mcp-reddit) by [adhikasp](https://github.com/adhikasp), which taught us how to interface with the Reddit API via MCP. Over time the project grew significantly beyond the original scope — adding a full REST API, topic aggregation across subreddits, Azure deployment, and expanding from 2 tools to 8 — and became its own standalone project.
+
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Credits
-
-Based on [mcp-reddit](https://github.com/adhikasp/mcp-reddit) by adhikasp.
+AGPL-3.0 License - see [LICENSE](LICENSE) for details.
